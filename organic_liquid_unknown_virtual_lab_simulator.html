@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pharmacy Organic Qualitative Lab — Liquid Unknown Simulator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Glassware, Liquid & Reaction Animations */
+    @keyframes bubbleRise {
+      0% { transform: translateY(0) scale(0.6); opacity: 0; }
+      20% { opacity: 0.9; }
+      100% { transform: translateY(-130px) scale(1.2); opacity: 0; }
+    }
+    @keyframes shimmer {
+      0%, 100% { opacity: 0.85; }
+      50% { opacity: 1; }
+    }
+    @keyframes flameFlicker {
+      0%, 100% { transform: scaleY(1) skewX(0deg); }
+      25% { transform: scaleY(1.08) skewX(-2deg); }
+      50% { transform: scaleY(0.95) skewX(2deg); }
+      75% { transform: scaleY(1.05) skewX(-1deg); }
+    }
+    @keyframes shakeTube {
+      0%, 100% { transform: rotate(0deg); }
+      20% { transform: rotate(-10deg); }
+      40% { transform: rotate(10deg); }
+      60% { transform: rotate(-8deg); }
+      80% { transform: rotate(8deg); }
+    }
+    @keyframes steamRise {
+      0% { transform: translateY(0) scale(0.8); opacity: 0; }
+      40% { opacity: 0.5; }
+      100% { transform: translateY(-45px) scale(1.4); opacity: 0; }
+    }
+
+    .bubble {
+      position: absolute;
+      bottom: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.75);
+      animation: bubbleRise 1.4s infinite ease-in;
+      pointer-events: none;
+    }
+    .steam {
+      position: absolute;
+      top: -15px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 70%);
+      animation: steamRise 1.8s infinite ease-out;
+      pointer-events: none;
+    }
+    .animate-shake-tube {
+      animation: shakeTube 0.55s ease-in-out;
+    }
+    .animate-flame {
+      animation: flameFlicker 0.35s infinite ease-in-out;
+      transform-origin: bottom center;
+    }
+    .test-tube-glass {
+      background: linear-gradient(90deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.02) 75%, rgba(255,255,255,0.14) 100%);
+      box-shadow: inset 0 0 12px rgba(255,255,255,0.12), 0 10px 25px rgba(0,0,0,0.45);
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-teal-500/30">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20 shrink-0">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 3h6m-5 0v5.5L4.5 18A2 2 0 006.2 21h11.6a2 2 0 001.7-3L14 8.5V3" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            PharmaLab <span class="text-teal-400">Qualitative Bench</span>
+          </h1>
+          <p class="text-xs text-slate-400 hidden sm:block">Organic Liquid Unknown Scheme Simulator (9 Aliphatic Compounds)</p>
+        </div>
+      </div>
+
+      <!-- Mode Switcher & Scheme Modal Button -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center flex-wrap gap-1">
+          <button id="btnModeGuided" onclick="setMode('guided')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white">
+            Guided Study Mode
+          </button>
+          <button id="btnModeHard" onclick="setMode('hard')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-rose-600 text-white shadow shadow-rose-600/30">
+            🔥 Hard Exam Mode (Real Bench)
+          </button>
+          <button id="btnModeSandbox" onclick="setMode('sandbox')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white">
+            Free Sandbox
+          </button>
+        </div>
+
+        <button id="btnSchemeChart" onclick="toggleSchemeModal()" class="hidden px-3 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+          </svg>
+          <span>Scheme Chart</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Banner for Active Unknown / Compound Selector -->
+  <div class="bg-slate-900/60 border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <!-- Exam Mode Status (Used for both Hard Exam & Guided Study) -->
+      <div id="examBanner" class="flex items-center gap-3 flex-wrap">
+        <span id="vialBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-mono font-semibold">
+          <span class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
+          UNKNOWN VIAL #<span id="unknownVialId">U-104</span>
+        </span>
+        <span id="modeSubtext" class="text-xs text-slate-400">Real Bench: Measure exact mLs, drops & spatulas from raw bottles without scheme hints.</span>
+        <button onclick="newUnknownExam()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          ↻ New Random Unknown
+        </button>
+      </div>
+
+      <!-- Sandbox Mode Selector -->
+      <div id="practiceBanner" class="hidden items-center gap-3 flex-wrap">
+        <label for="practiceSelect" class="text-xs font-semibold text-teal-400 uppercase tracking-wider">Sandbox Vial:</label>
+        <select id="practiceSelect" onchange="selectPracticeCompound(this.value)" class="bg-slate-800 border border-slate-700 text-white text-xs sm:text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-teal-500">
+          <option value="ethanol">1. Ethanol (Neutral, Iodoform +ve, Nitroprusside -ve)</option>
+          <option value="methanol">2. Methanol (Neutral, Iodoform -ve, Salicylic -ve, Borax -ve)</option>
+          <option value="glycerol">3. Glycerol (Neutral, Viscous, Borax +ve)</option>
+          <option value="formalin">4. Formalin (Weak Acid L.P. Trap!, Salicylic +ve Crimson Red)</option>
+          <option value="acetaldehyde">5. Acetaldehyde (Weak Acid L.P. Trap!, Iodoform +ve, 30% NaOH Yellow Resin)</option>
+          <option value="acetone">6. Acetone (Neutral, Iodoform +ve, Nitroprusside +ve, No Resin)</option>
+          <option value="formic_acid">7. Formic Acid (Strong Acid Na2CO3 eff., KMnO4 Decolorizes + Brown ppt)</option>
+          <option value="acetic_acid">8. Acetic Acid (Strong Acid Na2CO3 eff., KMnO4 No Decolorization)</option>
+          <option value="ethyl_acetate">9. Ethyl Acetate (Immiscible, Lighter than H2O)</option>
+        </select>
+        <span id="practiceHint" class="text-xs text-slate-400 italic"></span>
+      </div>
+
+      <!-- Stats Pill -->
+      <div class="flex items-center gap-3 text-xs font-mono text-slate-400 ml-auto">
+        <span>Active Tube: <strong id="statActiveTube" class="text-white">#1</strong></span>
+        <span>Actions: <strong id="statSteps" class="text-teal-400">0</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main 3-Column Laboratory Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+    <!-- LEFT COLUMN: Reagent Shelf (Switches between Guided Mode & Hard Real-Bench Mode) -->
+    <section class="lg:col-span-5 flex flex-col gap-3">
+
+      <!-- =================================================================== -->
+      <!-- VIEW A: HARD EXAM MODE & SANDBOX (RAW REAGENT BOTTLES & JARS)       -->
+      <!-- =================================================================== -->
+      <div id="hardBenchControls" class="flex flex-col gap-3 flex-1">
+        <!-- Raw Liquid Bottles -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-lg">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+              <span>🧪 Raw Liquid Reagent Bottles</span>
+            </h2>
+            <span class="text-[10px] font-mono text-slate-400">Dispense into Tube #<span id="bottleTubeLabel">1</span></span>
+          </div>
+
+          <div class="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
+            <!-- Unknown Liquid -->
+            <div class="flex items-center justify-between p-2 rounded-xl bg-teal-950/30 border border-teal-500/30">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-teal-400"></span>
+                <span class="text-xs font-bold text-teal-200">Unknown Liquid</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="doseLiquid('unknown', 'drop', 1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[11px] font-mono font-semibold text-white active:scale-95">+1 drop</button>
+                <button onclick="doseLiquid('unknown', 'ml', 1)" class="px-2.5 py-1 rounded-lg bg-teal-600/30 hover:bg-teal-600/40 border border-teal-500/50 text-[11px] font-mono font-semibold text-teal-100 active:scale-95">+1 mL</button>
+              </div>
+            </div>
+
+            <!-- Distilled H2O -->
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+                <span class="text-xs font-semibold text-slate-200">Distilled H₂O</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="doseLiquid('water', 'drop', 1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-mono text-slate-300 active:scale-95">+1 drop</button>
+                <button onclick="doseLiquid('water', 'ml', 1)" class="px-2.5 py-1 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-[11px] font-mono font-semibold text-sky-200 active:scale-95">+1 mL</button>
+              </div>
+            </div>
+
+            <!-- 10% NaOH -->
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                <span class="text-xs font-semibold text-slate-200">10% NaOH</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="doseLiquid('naoh10', 'drop', 1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-mono text-slate-300 active:scale-95">+1 drop</button>
+                <button onclick="doseLiquid('naoh10', 'ml', 1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[11px] font-mono font-semibold text-white active:scale-95">+1 mL</button>
+              </div>
+            </div>
+
+            <!-- 30% NaOH -->
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-orange-400"></span>
+                <span class="text-xs font-semibold text-slate-200">30% NaOH</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="doseLiquid('naoh30', 'drop', 1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-mono text-slate-300 active:scale-95">+1 drop</button>
+                <button onclick="doseLiquid('naoh30', 'ml', 1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[11px] font-mono font-semibold text-white active:scale-95">+1 mL</button>
+              </div>
+            </div>
+
+            <!-- I2 Solution -->
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-600"></span>
+                <span class="text-xs font-semibold text-slate-200">I₂ Solution (Iodine)</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="doseLiquid('iodine', 'drop', 1)" class="px-2.5 py-1 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-[11px] font-mono text-amber-200 active:scale-95">+1 drop</button>
+                <button onclick="doseLiquid('iodine', 'ml', 1)" class="px-2.5 py-1 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-[11px] font-mono font-semibold text-amber-200 active:scale-95">+1 mL</button>
+              </div>
+            </div>
+
+            <!-- Sodium Nitroprusside -->
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <span class="text-xs font-semibold text-slate-200">Sodium Nitroprusside</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="doseLiquid('nitroprusside', 'drop', 1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-mono text-slate-300 active:scale-95">+1 drop</button>
+                <button onclick="doseLiquid('nitroprusside', 'ml', 1)" class="px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-[11px] font-mono font-semibold text-rose-200 active:scale-95">+1 mL</button>
+              </div>
+            </div>
+
+            <!-- Conc. H2SO4 (Wall vs Direct drop) -->
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/80 border border-red-900/50">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                <span class="text-xs font-semibold text-red-200">Conc. H₂SO₄</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="doseLiquid('conc_h2so4_direct', 'drop', 1)" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-mono text-slate-300 active:scale-95">+1 drop</button>
+                <button onclick="doseLiquid('conc_h2so4_wall', 'wall_drops', 5)" class="px-2 py-1 rounded-lg bg-red-600/25 hover:bg-red-600/35 border border-red-500/40 text-[11px] font-mono font-semibold text-red-200 active:scale-95">+5 drops (wall)</button>
+              </div>
+            </div>
+
+            <!-- Phenolphthalein -->
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-pink-400"></span>
+                <span class="text-xs font-semibold text-slate-200">Phenolphthalein (Ph.Ph)</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="doseLiquid('phenolphthalein', 'drop', 1)" class="px-2.5 py-1 rounded-lg bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/40 text-[11px] font-mono font-semibold text-pink-200 active:scale-95">+1 drop</button>
+              </div>
+            </div>
+
+            <!-- KMnO4 -->
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+                <span class="text-xs font-semibold text-slate-200">KMnO₄ Solution</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="doseLiquid('kmno4', 'drop', 1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-mono text-slate-300 active:scale-95">+1 drop</button>
+                <button onclick="doseLiquid('kmno4', 'ml', 1)" class="px-2.5 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-[11px] font-mono font-semibold text-purple-200 active:scale-95">+1 mL</button>
+              </div>
+            </div>
+
+            <!-- HgCl2 -->
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/80 border border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                <span class="text-xs font-semibold text-slate-200">HgCl₂ Solution</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="doseLiquid('hgcl2', 'drop', 1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-mono text-slate-300 active:scale-95">+1 drop</button>
+                <button onclick="doseLiquid('hgcl2', 'ml', 1)" class="px-2.5 py-1 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-[11px] font-mono font-semibold text-cyan-200 active:scale-95">+1 mL</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Raw Solid Jars & Indicator Strips -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-lg">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">🥄 Solid Reagent Jars & Litmus Strips</h2>
+          <div class="grid grid-cols-3 gap-1.5 mb-2.5">
+            <button onclick="doseSolid('salicylic', 'Salicylic Acid')" class="p-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-center transition active:scale-95">
+              <span class="block text-[11px] font-bold text-white">Salicylic Acid</span>
+              <span class="text-[10px] font-mono text-amber-300">+1 spatula</span>
+            </button>
+            <button onclick="doseSolid('borax', 'Borax')" class="p-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-center transition active:scale-95">
+              <span class="block text-[11px] font-bold text-white">Borax</span>
+              <span class="text-[10px] font-mono text-amber-300">+1 spatula</span>
+            </button>
+            <button onclick="doseSolid('na2co3', 'Na₂CO₃')" class="p-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-center transition active:scale-95">
+              <span class="block text-[11px] font-bold text-white">Na₂CO₃</span>
+              <span class="text-[10px] font-mono text-amber-300">+1 spatula</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="dipLitmus('blue')" class="py-2 px-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-200 text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95">
+              <span class="w-4 h-2 rounded-sm bg-blue-500"></span>
+              <span>Dip Blue Litmus</span>
+            </button>
+            <button onclick="dipLitmus('red')" class="py-2 px-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-200 text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95">
+              <span class="w-4 h-2 rounded-sm bg-red-500"></span>
+              <span>Dip Red Litmus</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- VIEW B: GUIDED STUDY MODE (GROUPED PROTOCOL CARDS)                  -->
+      <!-- =================================================================== -->
+      <div id="guidedBenchControls" class="hidden flex-col gap-3 flex-1">
+        <!-- Step 1: Add Unknown Liquid to Current Tube -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-lg">
+          <div class="flex items-center justify-between mb-2.5">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-teal-400">1. Dispense Unknown Sample</h2>
+            <span class="text-[11px] text-slate-400 font-mono">Guided Presets</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="doseLiquid('unknown', 'ml', 1)" class="p-2.5 rounded-xl bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/40 text-teal-200 text-xs font-semibold transition flex flex-col items-center gap-0.5 active:scale-95">
+              <span class="font-mono text-sm font-bold text-white">+ 1 mL</span>
+              <span class="text-[10px] text-teal-300/80">Standard Vol.</span>
+            </button>
+            <button onclick="doseLiquid('unknown', 'drop', 3)" class="p-2.5 rounded-xl bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/40 text-teal-200 text-xs font-semibold transition flex flex-col items-center gap-0.5 active:scale-95">
+              <span class="font-mono text-sm font-bold text-white">+ 3 drops</span>
+              <span class="text-[10px] text-teal-300/80">Salicylic Test</span>
+            </button>
+            <button onclick="doseLiquid('unknown', 'drop', 2)" class="p-2.5 rounded-xl bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/40 text-teal-200 text-xs font-semibold transition flex flex-col items-center gap-0.5 active:scale-95">
+              <span class="font-mono text-sm font-bold text-white">+ 2 drops</span>
+              <span class="text-[10px] text-teal-300/80">KMnO₄ / Borax</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Categorized Reagent Shelf -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-lg flex-1 flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">2. Guided Protocol Kits</h2>
+            <span class="text-[11px] text-slate-400">Select protocol tab</span>
+          </div>
+
+          <div class="grid grid-cols-4 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 mb-3 text-[11px] font-semibold">
+            <button onclick="switchReagentTab('prelim')" id="tab-prelim" class="py-1.5 px-1 rounded-lg bg-slate-800 text-teal-300 transition">1. Prelim</button>
+            <button onclick="switchReagentTab('neutral1')" id="tab-neutral1" class="py-1.5 px-1 rounded-lg text-slate-400 hover:text-white transition">2. Iodoform</button>
+            <button onclick="switchReagentTab('neutral2')" id="tab-neutral2" class="py-1.5 px-1 rounded-lg text-slate-400 hover:text-white transition">3. Salic/Borax</button>
+            <button onclick="switchReagentTab('acid')" id="tab-acid" class="py-1.5 px-1 rounded-lg text-slate-400 hover:text-white transition">4. Acids/Conf</button>
+          </div>
+
+          <!-- TAB 1: Preliminary Tests -->
+          <div id="panel-prelim" class="space-y-2.5 flex-1">
+            <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex justify-between items-center mb-1.5">
+                <span class="text-xs font-semibold text-sky-300">Distilled Water (H₂O) — Miscibility</span>
+                <span class="text-[10px] font-mono text-slate-400">1 mL unk + 2 mL H₂O</span>
+              </div>
+              <button onclick="doseLiquid('water', 'ml', 2)" class="w-full py-2 px-3 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-sky-200 text-xs font-semibold transition flex items-center justify-between">
+                <span>Add 2 mL Distilled Water</span>
+                <span class="font-mono text-[11px] bg-sky-950 px-2 py-0.5 rounded">+2 mL</span>
+              </button>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex justify-between items-center mb-1.5">
+                <span class="text-xs font-semibold text-indigo-300">Blue Litmus Paper (L.P.)</span>
+                <span class="text-[10px] font-mono text-slate-400">Test Acidity</span>
+              </div>
+              <button onclick="dipLitmus('blue')" class="w-full py-2 px-3 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-200 text-xs font-semibold transition flex items-center justify-between">
+                <span>Dip Blue Litmus Paper into Tube</span>
+                <span class="w-5 h-2 rounded-sm bg-blue-500 inline-block"></span>
+              </button>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex justify-between items-center mb-1.5">
+                <span class="text-xs font-semibold text-amber-300">Sodium Carbonate (Na₂CO₃)</span>
+                <span class="text-[10px] font-mono text-slate-400">Strong vs Weak Acid</span>
+              </div>
+              <button onclick="doseSolid('na2co3', 'Na₂CO₃')" class="w-full py-2 px-3 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-200 text-xs font-semibold transition flex items-center justify-between">
+                <span>Add 1 Spatula Na₂CO₃</span>
+                <span class="font-mono text-[11px] bg-amber-950 px-2 py-0.5 rounded">+1 spatula</span>
+              </button>
+              <p class="text-[10px] text-slate-400 mt-1.5 leading-relaxed">
+                <strong class="text-amber-400">N.B. Rule:</strong> Acetaldehyde & Formalin may turn L.P. slightly red (weak acid), but give <strong>no eff.</strong> with Na₂CO₃ → treat as neutral!
+              </p>
+            </div>
+          </div>
+
+          <!-- TAB 2: Iodoform, Nitroprusside, 30% NaOH Boiling -->
+          <div id="panel-neutral1" class="space-y-2.5 hidden flex-1">
+            <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-semibold text-yellow-300">2- Iodoform Test</span>
+                <span class="text-[10px] font-mono text-slate-400">1mL unk + 3mL 10% NaOH + excess I₂</span>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5 mt-1.5">
+                <button onclick="doseLiquid('naoh10', 'ml', 3)" class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-semibold">
+                  + 3 mL 10% NaOH
+                </button>
+                <button onclick="doseLiquid('iodine', 'ml', 1)" class="py-1.5 px-2 rounded-lg bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-500/40 text-yellow-200 text-[11px] font-semibold">
+                  + Excess I₂ (1 mL)
+                </button>
+              </div>
+              <p class="text-[10px] text-yellow-400/80 mt-1">N.B: Add excess I₂ till persistent yellow, then warm between hands!</p>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-semibold text-rose-300">3- Sodium Nitroprusside Test</span>
+                <span class="text-[10px] font-mono text-slate-400">1mL unk + 3mL 30% NaOH + 2mL NP</span>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5 mt-1.5">
+                <button onclick="doseLiquid('naoh30', 'ml', 3)" class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-semibold">
+                  + 3 mL 30% NaOH
+                </button>
+                <button onclick="doseLiquid('nitroprusside', 'ml', 2)" class="py-1.5 px-2 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-200 text-[11px] font-semibold">
+                  + 2 mL Na Nitroprusside
+                </button>
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-semibold text-orange-300">4- Action of 30% NaOH (Boiling)</span>
+                <span class="text-[10px] font-mono text-slate-400">1mL unk + 2mL 30% NaOH + Boil</span>
+              </div>
+              <button onclick="doseLiquid('naoh30', 'ml', 2)" class="w-full py-1.5 px-2.5 rounded-lg bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/40 text-orange-200 text-[11px] font-semibold">
+                + 2 mL 30% NaOH (Then use Boiling Water Bath →)
+              </button>
+            </div>
+          </div>
+
+          <!-- TAB 3: Salicylic Acid Test & Borax Test -->
+          <div id="panel-neutral2" class="space-y-2.5 hidden flex-1">
+            <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-semibold text-red-300">3- Salicylic Acid Test (Dry T.T.)</span>
+                <span class="text-[10px] font-mono text-slate-400">1 spat + 3-4 drops unk + 5 drops H₂SO₄</span>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5 mt-1.5">
+                <button onclick="doseSolid('salicylic', 'Salicylic Acid')" class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-semibold">
+                  + 1 Spatula Salicylic Acid
+                </button>
+                <button onclick="doseLiquid('conc_h2so4_wall', 'wall_drops', 5)" class="py-1.5 px-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-200 text-[11px] font-semibold">
+                  + 5 drops Conc. H₂SO₄ (Wall)
+                </button>
+              </div>
+              <p class="text-[10px] text-red-400 mt-1 font-medium">⚠️ N.B: Don't shake the test tube at all!</p>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-semibold text-pink-300">4- Borax Test (Glycerol vs Methanol)</span>
+                <span class="text-[10px] font-mono text-slate-400">Borax + 3mL H₂O + 2 drops Ph.Ph</span>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5 mt-1.5">
+                <button onclick="doseSolid('borax', 'Borax'); doseLiquid('water', 'ml', 3);" class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-semibold">
+                  + Borax + 3 mL H₂O
+                </button>
+                <button onclick="doseLiquid('phenolphthalein', 'drop', 2)" class="py-1.5 px-2 rounded-lg bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/40 text-pink-200 text-[11px] font-semibold">
+                  + 2 drops Ph.Ph (Pink)
+                </button>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1">Add 2 drops unknown & shake → pink disappears; heat → pink reappears!</p>
+            </div>
+          </div>
+
+          <!-- TAB 4: Acids (Alkaline KMnO4, HgCl2) & Confirmatory Tests -->
+          <div id="panel-acid" class="space-y-2.5 hidden flex-1">
+            <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-semibold text-purple-300">2- Alkaline KMnO₄ Test</span>
+                <span class="text-[10px] font-mono text-slate-400">3mL KMnO₄ + 2 spat Na₂CO₃ + 1-2 drops unk</span>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5 mt-1.5">
+                <button onclick="doseLiquid('kmno4', 'ml', 3)" class="py-1.5 px-2 rounded-lg bg-purple-600/25 hover:bg-purple-600/35 border border-purple-500/40 text-purple-200 text-[11px] font-semibold">
+                  + 3 mL KMnO₄
+                </button>
+                <button onclick="doseSolid('na2co3', 'Na₂CO₃'); doseSolid('na2co3', 'Na₂CO₃');" class="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-semibold">
+                  + 2 Spatulas Na₂CO₃
+                </button>
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-semibold text-cyan-300">Confirmatory: HgCl₂ Test</span>
+                <span class="text-[10px] font-mono text-slate-400">1mL acid + 1mL HgCl₂ + Direct Flame</span>
+              </div>
+              <button onclick="doseLiquid('hgcl2', 'ml', 1)" class="w-full py-1.5 px-2.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-200 text-[11px] font-semibold">
+                + 1 mL HgCl₂ (Then Boil on Direct Flame →)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CENTER COLUMN: 3-Tube Rack, Interactive Reaction Vessel & Physical Tools -->
+    <section class="lg:col-span-4 flex flex-col gap-3">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex-1 flex flex-col justify-between relative overflow-hidden">
+
+        <!-- 3-Test-Tube Rack Switcher -->
+        <div class="flex items-center justify-between gap-2 z-10 pb-2 border-b border-slate-800">
+          <div class="flex items-center gap-1.5">
+            <button id="rackBtn0" onclick="selectTube(0)" class="px-2.5 py-1.5 rounded-xl text-xs font-bold border transition bg-teal-600/25 border-teal-500 text-teal-200">
+              Tube #1
+            </button>
+            <button id="rackBtn1" onclick="selectTube(1)" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition bg-slate-950 border-slate-800 text-slate-400 hover:text-white">
+              Tube #2
+            </button>
+            <button id="rackBtn2" onclick="selectTube(2)" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition bg-slate-950 border-slate-800 text-slate-400 hover:text-white">
+              Tube #3
+            </button>
+          </div>
+
+          <button onclick="resetActiveTube()" class="px-2.5 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-200 text-xs font-semibold transition flex items-center gap-1 active:scale-95" title="Discard & replace with a clean dry tube">
+            <span>🗑 Reset Tube</span>
+          </button>
+        </div>
+
+        <!-- Active Tube Status Header -->
+        <div class="flex items-center justify-between mt-2 z-10">
+          <h3 id="tubeTitle" class="text-xs font-bold text-white flex items-center gap-2">
+            Tube #1 <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Clean & Dry</span>
+          </h3>
+          <span id="tubeVolumeBadge" class="text-[11px] font-mono text-slate-400">Vol: 0.0 mL</span>
+        </div>
+
+        <!-- Visual Stage: Test Tube + Litmus Strip + Heat Source -->
+        <div class="my-3 flex-1 min-h-[260px] flex flex-col items-center justify-center relative bg-slate-950/60 rounded-2xl border border-slate-800/80 p-3">
+
+          <!-- Litmus Paper Indicator -->
+          <div id="litmusStrip" class="hidden absolute top-3 right-4 flex flex-col items-center bg-slate-900/90 p-2 rounded-xl border border-slate-700 shadow-md z-20">
+            <span id="litmusTypeLabel" class="text-[9px] font-mono text-slate-400 mb-1">Blue L.P.</span>
+            <div class="w-4 h-11 rounded-sm overflow-hidden border border-slate-600 flex flex-col">
+              <div id="litmusBase" class="h-1/2 bg-blue-500"></div>
+              <div id="litmusTip" class="h-1/2 bg-blue-500 transition-colors duration-500"></div>
+            </div>
+            <span id="litmusLabel" class="text-[10px] font-semibold mt-1 text-blue-300">Neutral</span>
+          </div>
+
+          <!-- Temperature / Condition Indicator -->
+          <div id="tempBadge" class="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center gap-1.5">
+            <span id="tempDot" class="w-2 h-2 rounded-full bg-sky-400"></span>
+            <span id="tempText">Room Temp</span>
+          </div>
+
+          <!-- Test Tube Container -->
+          <div id="tubeWrapper" class="relative flex flex-col items-center mt-5 transition-transform">
+            <div id="steamContainer" class="hidden">
+              <div class="steam w-6 h-6 left-2"></div>
+              <div class="steam w-8 h-8 left-5" style="animation-delay: 0.6s;"></div>
+            </div>
+
+            <!-- Glass Rim -->
+            <div class="w-16 h-2.5 rounded-full border-2 border-slate-400/60 bg-slate-800/40 z-10 -mb-1"></div>
+
+            <!-- Glass Body -->
+            <div class="w-14 h-44 rounded-b-full border-x-2 border-b-2 border-slate-400/50 test-tube-glass relative overflow-hidden flex flex-col justify-end">
+              <!-- Upper Immiscible Layer / Crimson Ring -->
+              <div id="upperLayer" class="w-full transition-all duration-500 relative" style="height: 0%; background-color: transparent;"></div>
+
+              <!-- Main Liquid Column -->
+              <div id="mainLiquid" class="w-full transition-all duration-500 relative flex items-end justify-center" style="height: 0%; background-color: rgba(203, 213, 225, 0.25);">
+                <div id="bubblesContainer" class="absolute inset-0 overflow-hidden hidden"></div>
+                <div id="precipitateLayer" class="w-full transition-all duration-500 rounded-b-full" style="height: 0px; background-color: transparent;"></div>
+              </div>
+            </div>
+
+            <!-- Heat Source Visual Under Tube -->
+            <div id="heatVisual" class="h-7 flex items-center justify-center mt-1">
+              <div id="bunsenFlame" class="hidden flex flex-col items-center">
+                <div class="w-5 h-6 bg-gradient-to-t from-blue-600 via-sky-400 to-amber-200 rounded-full animate-flame opacity-90 blur-[0.5px]"></div>
+              </div>
+              <div id="waterBathVisual" class="hidden px-2.5 py-0.5 rounded-b-xl bg-sky-500/20 border-x border-b border-sky-400/40 text-[10px] font-mono text-sky-300">
+                ♨ Boiling Water Bath
+              </div>
+              <div id="handWarmVisual" class="hidden px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-[10px] font-mono text-amber-300">
+                🤲 Warmed (37°C)
+              </div>
+            </div>
+          </div>
+
+          <!-- Current Tube Contents Pill Summary -->
+          <div id="tubeContentsBar" class="w-full mt-1 px-2.5 py-1 rounded-lg bg-slate-950/90 border border-slate-800/80 text-[10px] font-mono text-slate-400 truncate">
+            Contents: Empty dry tube
+          </div>
+
+          <!-- Live Visual Observation Callout -->
+          <div id="visualStatusBox" class="w-full mt-1.5 p-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-center">
+            <p id="visualObservation" class="text-xs font-medium text-slate-200">
+              Empty dry test tube ready. Dispense unknown liquid or reagents to begin.
+            </p>
+          </div>
+        </div>
+
+        <!-- Physical Bench Actions -->
+        <div class="space-y-1.5 z-10">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Bench Tools & Thermal Controls</span>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            <button onclick="manipulateTube('shake')" class="py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition active:scale-95">
+              🫨 Shake Tube
+            </button>
+            <button onclick="manipulateTube('warm_hands')" class="py-2 px-2 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-xs font-semibold text-amber-200 transition active:scale-95">
+              🤲 Warm Hands
+            </button>
+            <button onclick="manipulateTube('water_bath')" class="py-2 px-2 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-xs font-semibold text-sky-200 transition active:scale-95">
+              ♨ Water Bath
+            </button>
+            <button onclick="manipulateTube('direct_flame')" class="py-2 px-2 rounded-xl bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/40 text-xs font-semibold text-orange-200 transition active:scale-95">
+              🔥 Direct Flame
+            </button>
+            <button onclick="manipulateTube('cool')" class="col-span-2 py-2 px-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-xs font-semibold text-cyan-200 transition active:scale-95">
+              ❄️ Cool Under Tap Water
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Lab Notebook Log & Final Deduction Submission -->
+    <section class="lg:col-span-3 flex flex-col gap-3">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-lg flex-1 flex flex-col min-h-[260px] max-h-[390px]">
+        <div class="flex items-center justify-between mb-2 pb-2 border-b border-slate-800">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <span>📓 Bench Log</span>
+          </h2>
+          <button onclick="clearLog()" class="text-[11px] text-slate-400 hover:text-slate-200">Clear</button>
+        </div>
+        <div id="labLog" class="flex-1 overflow-y-auto space-y-2 pr-1 text-xs font-mono">
+          <div class="p-2 rounded-lg bg-slate-950/80 border border-slate-800/80 text-slate-400">
+            [Bench Ready] 3 clean dry tubes on rack.
+          </div>
+        </div>
+      </div>
+
+      <!-- Final Compound Identification / Exam Submission -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-lg">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">
+          Final Unknown Deduction
+        </h2>
+        <label for="guessSelect" class="block text-[11px] text-slate-400 mb-1.5">
+          Identify the liquid unknown from the 9 scheme possibilities:
+        </label>
+        <select id="guessSelect" class="w-full bg-slate-950 border border-slate-700 text-white text-xs sm:text-sm rounded-xl px-3 py-2.5 mb-2.5 focus:outline-none focus:border-emerald-500">
+          <option value="">-- Select Identified Liquid --</option>
+          <option value="ethanol">Ethanol</option>
+          <option value="methanol">Methanol</option>
+          <option value="glycerol">Glycerol</option>
+          <option value="formalin">Formalin</option>
+          <option value="acetaldehyde">Acetaldehyde</option>
+          <option value="acetone">Acetone</option>
+          <option value="formic_acid">Formic acid</option>
+          <option value="acetic_acid">Acetic acid</option>
+          <option value="ethyl_acetate">Ethyl acetate</option>
+        </select>
+
+        <button onclick="submitDeduction()" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-emerald-600/20 transition active:scale-95">
+          Submit Lab Report & Grade
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Practical Exam Scorecard Modal -->
+  <div id="resultModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col p-5 shadow-2xl">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <span id="resultBadge" class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold uppercase mb-1">Result</span>
+          <h3 id="resultTitle" class="text-lg font-bold text-white">Practical Exam Scorecard</h3>
+        </div>
+        <button onclick="closeResultModal()" class="text-slate-400 hover:text-white p-1">✕</button>
+      </div>
+
+      <div id="resultBody" class="space-y-3 overflow-y-auto pr-1 text-xs sm:text-sm text-slate-300 leading-relaxed">
+        <!-- Populated dynamically -->
+      </div>
+
+      <div class="mt-5 pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
+        <button onclick="closeResultModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold">
+          Keep Testing
+        </button>
+        <button onclick="closeResultModal(); newUnknownExam();" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold">
+          Next Unknown →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reference Scheme Cheat-Sheet Modal -->
+  <div id="schemeModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-5xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold text-white">Scheme for Identification of Organic Liquid Unknown</h3>
+          <p class="text-xs text-slate-400">Ethanol, Methanol, Glycerol, Formalin, Acetaldehyde, Acetone, Formic acid, Acetic acid, Ethyl acetate</p>
+        </div>
+        <button onclick="toggleSchemeModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">Close ✕</button>
+      </div>
+
+      <div class="p-4 overflow-y-auto space-y-4 text-xs">
+        <!-- Step 1: Miscibility -->
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+          <h4 class="font-bold text-teal-400 text-sm mb-2">1- Miscibility Test (1 mL Unknown + 2 mL H₂O) & Litmus Paper (L.P.)</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <!-- Branch A -->
+            <div class="p-3 rounded-xl bg-slate-900 border border-slate-700">
+              <div class="font-bold text-sky-300 mb-1">* Miscible with H₂O, L.P. → Neutral</div>
+              <p class="text-slate-300 mb-2">∴ May be: <strong>Ethanol, Methanol, Glycerol, Acetaldehyde, Acetone, or Formalin</strong></p>
+              <div class="p-2 rounded bg-amber-500/10 border border-amber-500/30 text-amber-200 text-[11px]">
+                <strong>N.B. Trap:</strong> Acetaldehyde & Formalin may give slightly acidic L.P., but <strong>Na₂CO₃ test → No eff.</strong> (weak acid) → treat as neutral!
+              </div>
+            </div>
+            <!-- Branch B -->
+            <div class="p-3 rounded-xl bg-slate-900 border border-slate-700">
+              <div class="font-bold text-rose-300 mb-1">** Miscible with H₂O, L.P. → Acidic</div>
+              <p class="text-slate-300 mb-2"><strong>Na₂CO₃ test → Effervescence (Strong acid)</strong></p>
+              <p class="text-slate-300">∴ May be: <strong>Formic acid</strong> or <strong>Acetic acid</strong></p>
+            </div>
+            <!-- Branch C -->
+            <div class="p-3 rounded-xl bg-slate-900 border border-slate-700">
+              <div class="font-bold text-emerald-300 mb-1">*** Immiscible with H₂O</div>
+              <p class="text-slate-300">Lighter than H₂O (forms upper oily layer)</p>
+              <p class="text-emerald-300 font-bold mt-2">∴ Ethyl acetate</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Neutral Group Differentiation -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <h4 class="font-bold text-yellow-300 text-sm">2- Iodoform Test (Neutral Group)</h4>
+            <p class="text-slate-400">1 mL unknown + 3 mL 10% NaOH + excess I₂ (till persistent yellow) + warm between hands.</p>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <div class="p-2.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                <div class="font-bold text-yellow-300">Yellow ppt.:</div>
+                <p class="text-slate-200 mt-0.5">Ethanol, Acetaldehyde, or Acetone</p>
+                <hr class="border-slate-700 my-1.5">
+                <div class="font-bold text-rose-300">3- Na Nitroprusside Test:</div>
+                <p class="text-[11px] text-slate-400">1mL unk + 3mL 30% NaOH + 2mL NP</p>
+                <ul class="mt-1 space-y-1 text-[11px]">
+                  <li>• <strong>No red color</strong> → <span class="text-teal-300 font-bold">Ethanol</span></li>
+                  <li>• <strong>Red color</strong> → Acetaldehyde or Acetone:
+                    <div class="pl-2 mt-1 border-l-2 border-orange-500">
+                      <strong>4- 30% NaOH (boiling):</strong><br>
+                      - Yellow resin → <span class="text-orange-300 font-bold">Acetaldehyde</span><br>
+                      - No yellow resin → <span class="text-orange-300 font-bold">Acetone</span> (Confirm: NaHSO₃)
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-700">
+                <div class="font-bold text-slate-300">No yellow ppt.:</div>
+                <p class="text-slate-200 mt-0.5">Formalin, Methanol, or Glycerol</p>
+                <hr class="border-slate-700 my-1.5">
+                <div class="font-bold text-red-300">3- Salicylic Acid Test (Dry T.T.):</div>
+                <p class="text-[11px] text-slate-400">1 spat Salicylic + 3-4 drops unk + 5 drops Conc. H₂SO₄ on wall (Don't shake!)</p>
+                <ul class="mt-1 space-y-1 text-[11px]">
+                  <li>• <strong>+ve (Crimson red)</strong> → <span class="text-purple-300 font-bold">Formalin</span> (Confirm: Cu-mirror)</li>
+                  <li>• <strong>-ve</strong> → Methanol or Glycerol:
+                    <div class="pl-2 mt-1 border-l-2 border-pink-500">
+                      <strong>4- Borax Test:</strong><br>
+                      - Pink disappears on cold & reappears on heat → <span class="text-pink-300 font-bold">Glycerol</span><br>
+                      - Stays pink (-ve) → <span class="text-pink-300 font-bold">Methanol</span> (Confirm: Esterification)
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Strong Acids Differentiation -->
+          <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <h4 class="font-bold text-purple-300 text-sm">2- Alkaline KMnO₄ Test (Formic vs Acetic Acid)</h4>
+            <p class="text-slate-400">3 mL KMnO₄ + 2 spatulas Na₂CO₃ + 1–2 drops unknown.</p>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <div class="p-2.5 rounded-lg bg-amber-900/20 border border-amber-600/40">
+                <div class="font-bold text-amber-300">Decolorization & Brown ppt.:</div>
+                <p class="text-white font-bold mt-1">∴ Formic acid</p>
+                <p class="text-[11px] text-slate-400 mt-2">Confirm with <strong>HgCl₂ test</strong> (1mL acid + 1mL HgCl₂, boil on direct flame → white ppt turning grey).</p>
+              </div>
+              <div class="p-2.5 rounded-lg bg-purple-900/20 border border-purple-500/40">
+                <div class="font-bold text-purple-300">No Decolorization & No Brown ppt.:</div>
+                <p class="text-white font-bold mt-1">∴ Acetic acid</p>
+                <p class="text-[11px] text-slate-400 mt-2">Confirm with <strong>HgCl₂ test</strong> (No precipitate on boiling).</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Banner -->
+  <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 hidden px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs font-medium shadow-2xl transition-all"></div>
+
+  <script>
+    // =========================================================================
+    // CHEMICAL DATABASE FOR THE 9 LIQUIDS IN THE PHARMACY SCHEME
+    // =========================================================================
+    const COMPOUNDS = {
+      ethanol: {
+        name: 'Ethanol',
+        group: 'neutral',
+        miscible: true,
+        litmus: 'neutral',
+        na2co3Eff: false,
+        iodoform: true,
+        nitroprusside: false,
+        naohBoilResin: false,
+        salicylic: false,
+        borax: false,
+        kmno4Decolor: false,
+        hgcl2: false,
+        expectedPath: [
+          '1. Miscibility (1 mL unk + 2 mL H₂O → Miscible) & Blue Litmus Paper (stays Blue → Neutral)',
+          '2. Iodoform Test (1 mL unk + 3 mL 10% NaOH + excess I₂ till persistent yellow + warm between hands → Canary yellow ppt.)',
+          '3. Sodium Nitroprusside Test (1 mL unk + 3 mL 30% NaOH + 2 mL NP → No red color ∴ Ethanol)'
+        ]
+      },
+      methanol: {
+        name: 'Methanol',
+        group: 'neutral',
+        miscible: true,
+        litmus: 'neutral',
+        na2co3Eff: false,
+        iodoform: false,
+        nitroprusside: false,
+        naohBoilResin: false,
+        salicylic: false,
+        borax: false,
+        kmno4Decolor: false,
+        hgcl2: false,
+        expectedPath: [
+          '1. Miscibility (Miscible) & Blue Litmus Paper (Neutral)',
+          '2. Iodoform Test (No yellow ppt.)',
+          '3. Salicylic Acid Test in dry T.T. (1 spat Salicylic + 3–4 drops unk + 5 drops Conc. H₂SO₄ on wall, DO NOT shake → -ve)',
+          '4. Borax Test (1 spat Borax + 3 mL H₂O + 2 drops Ph.Ph + 2 drops unk + shake → pink stays ∴ Methanol; Confirm: Esterification)'
+        ]
+      },
+      glycerol: {
+        name: 'Glycerol',
+        group: 'neutral',
+        miscible: true,
+        litmus: 'neutral',
+        na2co3Eff: false,
+        iodoform: false,
+        nitroprusside: false,
+        naohBoilResin: false,
+        salicylic: false,
+        borax: true,
+        kmno4Decolor: false,
+        hgcl2: false,
+        expectedPath: [
+          '1. Miscibility (Miscible, viscous) & Blue Litmus Paper (Neutral)',
+          '2. Iodoform Test (No yellow ppt.)',
+          '3. Salicylic Acid Test (-ve)',
+          '4. Borax Test (1 spat Borax + 3 mL H₂O + 2 drops Ph.Ph → pink; + 2 drops unk & shake → pink disappears; boil → pink reappears ∴ Glycerol)'
+        ]
+      },
+      formalin: {
+        name: 'Formalin',
+        group: 'neutral',
+        miscible: true,
+        litmus: 'weak_acid',
+        na2co3Eff: false,
+        iodoform: false,
+        nitroprusside: false,
+        naohBoilResin: false,
+        salicylic: true,
+        borax: false,
+        kmno4Decolor: true,
+        hgcl2: false,
+        expectedPath: [
+          '1. Miscibility (Miscible) & L.P. (Slightly red weak acid → verify with Na₂CO₃: No eff. ∴ treat as Neutral!)',
+          '2. Iodoform Test (No yellow ppt.)',
+          '3. Salicylic Acid Test in dry T.T. (1 spat Salicylic + 3–4 drops unk + 5 drops Conc. H₂SO₄ on wall, DO NOT shake → Crimson red ring ∴ Formalin)'
+        ]
+      },
+      acetaldehyde: {
+        name: 'Acetaldehyde',
+        group: 'neutral',
+        miscible: true,
+        litmus: 'weak_acid',
+        na2co3Eff: false,
+        iodoform: true,
+        nitroprusside: true,
+        naohBoilResin: true,
+        salicylic: false,
+        borax: false,
+        kmno4Decolor: true,
+        hgcl2: false,
+        expectedPath: [
+          '1. Miscibility (Miscible) & L.P. (Slightly red weak acid → verify with Na₂CO₃: No eff. ∴ treat as Neutral!)',
+          '2. Iodoform Test (1 mL unk + 3 mL 10% NaOH + excess I₂ + warm hands → Yellow ppt.)',
+          '3. Sodium Nitroprusside Test (1 mL unk + 3 mL 30% NaOH + 2 mL NP → Wine-red color)',
+          '4. Action of 30% NaOH (1 mL unk + 2 mL 30% NaOH + boiling water bath → Yellow resin ∴ Acetaldehyde)'
+        ]
+      },
+      acetone: {
+        name: 'Acetone',
+        group: 'neutral',
+        miscible: true,
+        litmus: 'neutral',
+        na2co3Eff: false,
+        iodoform: true,
+        nitroprusside: true,
+        naohBoilResin: false,
+        salicylic: false,
+        borax: false,
+        kmno4Decolor: false,
+        hgcl2: false,
+        expectedPath: [
+          '1. Miscibility (Miscible) & Blue Litmus Paper (Neutral)',
+          '2. Iodoform Test (1 mL unk + 3 mL 10% NaOH + excess I₂ + warm hands → Yellow ppt.)',
+          '3. Sodium Nitroprusside Test (1 mL unk + 3 mL 30% NaOH + 2 mL NP → Wine-red color)',
+          '4. Action of 30% NaOH (1 mL unk + 2 mL 30% NaOH + boiling water bath → No yellow resin ∴ Acetone)'
+        ]
+      },
+      formic_acid: {
+        name: 'Formic acid',
+        group: 'acid',
+        miscible: true,
+        litmus: 'strong_acid',
+        na2co3Eff: true,
+        iodoform: false,
+        nitroprusside: false,
+        naohBoilResin: false,
+        salicylic: false,
+        borax: false,
+        kmno4Decolor: true,
+        hgcl2: true,
+        expectedPath: [
+          '1. Miscibility (Miscible) & Blue L.P. (Red) + Na₂CO₃ (Strong CO₂ effervescence ∴ strong acid)',
+          '2. Alkaline KMnO₄ Test (3 mL KMnO₄ + 2 spatulas Na₂CO₃ + 1–2 drops unk → Decolorization & brown MnO₂ ppt. ∴ Formic acid)',
+          '3. Confirm with HgCl₂ Test (1 mL acid + 1 mL HgCl₂ + boil on direct flame → White silky ppt. turning grey)'
+        ]
+      },
+      acetic_acid: {
+        name: 'Acetic acid',
+        group: 'acid',
+        miscible: true,
+        litmus: 'strong_acid',
+        na2co3Eff: true,
+        iodoform: false,
+        nitroprusside: false,
+        naohBoilResin: false,
+        salicylic: false,
+        borax: false,
+        kmno4Decolor: false,
+        hgcl2: false,
+        expectedPath: [
+          '1. Miscibility (Miscible) & Blue L.P. (Red) + Na₂CO₃ (Strong CO₂ effervescence ∴ strong acid)',
+          '2. Alkaline KMnO₄ Test (3 mL KMnO₄ + 2 spatulas Na₂CO₃ + 1–2 drops unk → Purple color persists ∴ Acetic acid)',
+          '3. Confirm with HgCl₂ Test (1 mL acid + 1 mL HgCl₂ + boil on direct flame → No ppt.)'
+        ]
+      },
+      ethyl_acetate: {
+        name: 'Ethyl acetate',
+        group: 'immiscible',
+        miscible: false,
+        litmus: 'neutral',
+        na2co3Eff: false,
+        iodoform: false,
+        nitroprusside: false,
+        naohBoilResin: false,
+        salicylic: false,
+        borax: false,
+        kmno4Decolor: false,
+        hgcl2: false,
+        expectedPath: [
+          '1. Miscibility Test (1 mL unk + 2 mL H₂O → Immiscible, forms upper oily layer lighter than water ∴ Ethyl acetate)'
+        ]
+      }
+    };
+
+    const REAGENT_NAMES = {
+      unknown: 'Unknown Liquid',
+      water: 'Distilled H₂O',
+      naoh10: '10% NaOH',
+      naoh30: '30% NaOH',
+      iodine: 'I₂ Solution',
+      nitroprusside: 'Na Nitroprusside',
+      conc_h2so4_direct: 'Conc. H₂SO₄ (direct)',
+      conc_h2so4_wall: 'Conc. H₂SO₄ (on wall)',
+      phenolphthalein: 'Phenolphthalein',
+      kmno4: 'KMnO₄',
+      hgcl2: 'HgCl₂',
+      salicylic: 'Salicylic Acid',
+      borax: 'Borax',
+      na2co3: 'Na₂CO₃'
+    };
+
+    // =========================================================================
+    // LAB SIMULATION STATE (3-TUBE RACK + EXACT DOSING COUNTERS)
+    // =========================================================================
+    function createEmptyTube() {
+      return {
+        isDry: true,
+        liquids: {}, // e.g., { unknown: { ml: 1, drops: 0 }, naoh10: { ml: 3, drops: 0 } }
+        solids: {},  // e.g., { salicylic: 1, na2co3: 2 } (in spatulas)
+        order: [],   // sequence of additions
+        shaken: false,
+        heatState: 'room', // 'room' | 'warm_hands' | 'water_bath' | 'direct_flame'
+        litmusType: null,  // 'blue' | 'red'
+        salicylicRuined: false
+      };
+    }
+
+    let state = {
+      mode: 'hard', // 'guided' | 'hard' | 'sandbox'
+      activeCompoundKey: 'acetaldehyde',
+      activeTubeIdx: 0,
+      tubes: [createEmptyTube(), createEmptyTube(), createEmptyTube()],
+      stepsCount: 0,
+      executedValidTests: new Set(),
+      proceduralErrors: []
+    };
+
+    // =========================================================================
+    // INITIALIZATION & MODE MANAGEMENT
+    // =========================================================================
+    function init() {
+      setMode('hard');
+    }
+
+    function setMode(newMode) {
+      state.mode = newMode;
+      const btnGuided = document.getElementById('btnModeGuided');
+      const btnHard = document.getElementById('btnModeHard');
+      const btnSandbox = document.getElementById('btnModeSandbox');
+      const btnScheme = document.getElementById('btnSchemeChart');
+      const hardControls = document.getElementById('hardBenchControls');
+      const guidedControls = document.getElementById('guidedBenchControls');
+      const examBanner = document.getElementById('examBanner');
+      const pracBanner = document.getElementById('practiceBanner');
+      const vialBadge = document.getElementById('vialBadge');
+      const modeSubtext = document.getElementById('modeSubtext');
+
+      // Reset tab buttons
+      const inactiveClass = 'px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white';
+      btnGuided.className = inactiveClass;
+      btnHard.className = inactiveClass;
+      btnSandbox.className = inactiveClass;
+
+      if (newMode === 'hard') {
+        btnHard.className = 'px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-rose-600 text-white shadow shadow-rose-600/30';
+        btnScheme.classList.add('hidden');
+        hardControls.classList.remove('hidden');
+        hardControls.classList.add('flex');
+        guidedControls.classList.add('hidden');
+        guidedControls.classList.remove('flex');
+        examBanner.classList.remove('hidden');
+        examBanner.classList.add('flex');
+        pracBanner.classList.add('hidden');
+        pracBanner.classList.remove('flex');
+        vialBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-mono font-semibold';
+        modeSubtext.textContent = 'Real Bench: Measure exact mLs, drops & spatulas from raw bottles without scheme hints.';
+        newUnknownExam();
+      } else if (newMode === 'guided') {
+        btnGuided.className = 'px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-teal-600 text-white shadow';
+        btnScheme.classList.remove('hidden');
+        guidedControls.classList.remove('hidden');
+        guidedControls.classList.add('flex');
+        hardControls.classList.add('hidden');
+        hardControls.classList.remove('flex');
+        examBanner.classList.remove('hidden');
+        examBanner.classList.add('flex');
+        pracBanner.classList.add('hidden');
+        pracBanner.classList.remove('flex');
+        vialBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-500/15 border border-teal-500/30 text-teal-300 text-xs font-mono font-semibold';
+        modeSubtext.textContent = 'Guided Study: Pre-grouped protocol buttons and Scheme Chart enabled.';
+        newUnknownExam();
+      } else {
+        btnSandbox.className = 'px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-indigo-600 text-white shadow';
+        btnScheme.classList.remove('hidden');
+        hardControls.classList.remove('hidden');
+        hardControls.classList.add('flex');
+        guidedControls.classList.add('hidden');
+        guidedControls.classList.remove('flex');
+        pracBanner.classList.remove('hidden');
+        pracBanner.classList.add('flex');
+        examBanner.classList.add('hidden');
+        examBanner.classList.remove('flex');
+        selectPracticeCompound(document.getElementById('practiceSelect').value);
+      }
+    }
+
+    function newUnknownExam(silent = false) {
+      const keys = Object.keys(COMPOUNDS);
+      state.activeCompoundKey = keys[Math.floor(Math.random() * keys.length)];
+      state.tubes = [createEmptyTube(), createEmptyTube(), createEmptyTube()];
+      state.activeTubeIdx = 0;
+      state.stepsCount = 0;
+      state.executedValidTests.clear();
+      state.proceduralErrors = [];
+      document.getElementById('unknownVialId').textContent = 'U-' + Math.floor(100 + Math.random() * 899);
+      document.getElementById('guessSelect').value = '';
+      clearLog(true);
+      selectTube(0, true);
+      updateStats();
+      if (!silent) {
+        logEntry(`New Unknown Vial assigned (${state.mode === 'hard' ? 'Hard Real Bench' : 'Guided Study'}).`, 'info');
+        showToast('New random unknown assigned!');
+      }
+    }
+
+    function selectPracticeCompound(key) {
+      state.activeCompoundKey = key;
+      state.tubes = [createEmptyTube(), createEmptyTube(), createEmptyTube()];
+      state.activeTubeIdx = 0;
+      state.stepsCount = 0;
+      state.executedValidTests.clear();
+      state.proceduralErrors = [];
+      document.getElementById('guessSelect').value = key;
+      const comp = COMPOUNDS[key];
+      document.getElementById('practiceHint').textContent = `Target: ${comp.name}`;
+      clearLog(true);
+      selectTube(0, true);
+      updateStats();
+      logEntry(`Free Sandbox: Loaded ${comp.name} into Unknown Vial.`, 'info');
+    }
+
+    function switchReagentTab(tabName) {
+      ['prelim', 'neutral1', 'neutral2', 'acid'].forEach(t => {
+        document.getElementById(`panel-${t}`).classList.add('hidden');
+        document.getElementById(`tab-${t}`).className = 'py-1.5 px-1 rounded-lg text-slate-400 hover:text-white transition';
+      });
+      document.getElementById(`panel-${tabName}`).classList.remove('hidden');
+      document.getElementById(`tab-${tabName}`).className = 'py-1.5 px-1 rounded-lg bg-slate-800 text-teal-300 transition';
+    }
+
+    // =========================================================================
+    // 3-TUBE RACK MANAGEMENT
+    // =========================================================================
+    function selectTube(idx, silent = false) {
+      state.activeTubeIdx = idx;
+      for (let i = 0; i < 3; i++) {
+        const btn = document.getElementById(`rackBtn${i}`);
+        const hasContent = !state.tubes[i].isDry;
+        if (i === idx) {
+          btn.className = 'px-2.5 py-1.5 rounded-xl text-xs font-bold border transition bg-teal-600/25 border-teal-500 text-teal-200';
+        } else if (hasContent) {
+          btn.className = 'px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition bg-amber-950/30 border-amber-700/60 text-amber-300 hover:text-white';
+        } else {
+          btn.className = 'px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition bg-slate-950 border-slate-800 text-slate-400 hover:text-white';
+        }
+      }
+      document.getElementById('bottleTubeLabel').textContent = idx + 1;
+      updateStats();
+      evaluateReaction(silent ? 'Empty dry test tube ready. Dispense unknown liquid or reagents to begin.' : `Switched to Tube #${idx + 1}.`, true);
+    }
+
+    function resetActiveTube() {
+      state.tubes[state.activeTubeIdx] = createEmptyTube();
+      selectTube(state.activeTubeIdx, true);
+      logEntry(`Discarded contents and placed clean, dry Tube #${state.activeTubeIdx + 1} in rack.`, 'neutral');
+    }
+
+    function getActiveTube() {
+      return state.tubes[state.activeTubeIdx];
+    }
+
+    function recordProceduralError(msg) {
+      if (!state.proceduralErrors.includes(msg)) {
+        state.proceduralErrors.push(msg);
+      }
+    }
+
+    // =========================================================================
+    // EXACT DOSING & MANIPULATION CONTROLS
+    // =========================================================================
+    function doseLiquid(id, unit, amount) {
+      const t = getActiveTube();
+      state.stepsCount++;
+      t.isDry = false;
+      if (!t.liquids[id]) t.liquids[id] = { ml: 0, drops: 0 };
+      if (unit === 'ml') {
+        t.liquids[id].ml += amount;
+      } else {
+        t.liquids[id].drops += amount;
+      }
+      t.order.push(id);
+
+      const unitText = unit === 'ml' ? `${amount} mL` : (unit === 'wall_drops' ? `${amount} drops along wall` : `${amount} drop${amount > 1 ? 's' : ''}`);
+      logEntry(`[Tube #${state.activeTubeIdx + 1}] Added +${unitText} ${REAGENT_NAMES[id]}.`, 'action');
+      evaluateReaction(`Added ${unitText} ${REAGENT_NAMES[id]}.`);
+      updateStats();
+      selectTube(state.activeTubeIdx, true); // refresh rack badge color
+    }
+
+    function doseSolid(id, label) {
+      const t = getActiveTube();
+      state.stepsCount++;
+
+      // Check if Salicylic acid added to a wet tube
+      if (id === 'salicylic' && getTotalLiquidMl(t) > 0) {
+        t.salicylicRuined = true;
+        recordProceduralError('Salicylic Acid Test: Added salicylic acid to a wet tube (requires a clean, dry test tube).');
+      }
+
+      t.isDry = false;
+      t.solids[id] = (t.solids[id] || 0) + 1;
+      t.order.push(id);
+      logEntry(`[Tube #${state.activeTubeIdx + 1}] Added +1 spatula ${label}.`, 'action');
+      evaluateReaction(`Added 1 spatula ${label}.`);
+      updateStats();
+      selectTube(state.activeTubeIdx, true);
+    }
+
+    function dipLitmus(stripColor) {
+      const t = getActiveTube();
+      const comp = COMPOUNDS[state.activeCompoundKey];
+      if (getTotalLiquidMl(t) === 0) {
+        showToast('Dispense liquid into the tube before dipping litmus paper!');
+        return;
+      }
+      state.stepsCount++;
+      t.litmusType = stripColor;
+
+      // Determine pH behavior of current mixture
+      const hasAlkali = (t.liquids.naoh10 && (t.liquids.naoh10.ml > 0 || t.liquids.naoh10.drops > 0)) ||
+                        (t.liquids.naoh30 && (t.liquids.naoh30.ml > 0 || t.liquids.naoh30.drops > 0)) ||
+                        (t.solids.na2co3 && t.solids.na2co3 > 0);
+      const hasUnknown = t.liquids.unknown && (t.liquids.unknown.ml > 0 || t.liquids.unknown.drops > 0);
+
+      let obs = '';
+      if (hasAlkali) {
+        obs = stripColor === 'red'
+          ? 'Red Litmus Paper turns BLUE (Alkaline mixture).'
+          : 'Blue Litmus Paper stays BLUE (Alkaline mixture).';
+      } else if (hasUnknown) {
+        if (stripColor === 'blue') {
+          state.executedValidTests.add('Litmus Paper (L.P.) acidity check');
+          if (comp.litmus === 'strong_acid') {
+            obs = 'Blue Litmus Paper turns BRIGHT RED (Acidic reaction).';
+          } else if (comp.litmus === 'weak_acid') {
+            obs = 'Blue Litmus Paper turns SLIGHTLY/FAINTLY RED! (Check Na₂CO₃ effervescence to distinguish strong vs weak acid!)';
+          } else {
+            obs = 'Blue Litmus Paper stays BLUE (Neutral reaction).';
+          }
+        } else {
+          obs = 'Red Litmus Paper stays RED (Does not turn blue — not basic).';
+        }
+      } else {
+        obs = 'Neutral distilled water — no change in litmus color.';
+      }
+
+      logEntry(`[Tube #${state.activeTubeIdx + 1}] Litmus Test: ${obs}`, comp.litmus === 'weak_acid' && stripColor === 'blue' ? 'warn' : 'result');
+      evaluateReaction(obs);
+      updateStats();
+    }
+
+    function manipulateTube(action) {
+      const t = getActiveTube();
+      state.stepsCount++;
+      const tubeWrapper = document.getElementById('tubeWrapper');
+
+      if (action === 'shake') {
+        tubeWrapper.classList.remove('animate-shake-tube');
+        void tubeWrapper.offsetWidth;
+        tubeWrapper.classList.add('animate-shake-tube');
+        t.shaken = true;
+
+        // Salicylic acid NO SHAKING rule
+        if (t.solids.salicylic || t.liquids.conc_h2so4_wall || t.liquids.conc_h2so4_direct) {
+          t.salicylicRuined = true;
+          recordProceduralError('Salicylic Acid Test: Shook the test tube! (Violated N.B: Do not shake at all — destroys crimson interface ring).');
+          logEntry(`[Tube #${state.activeTubeIdx + 1}] ❌ Shook tube during Salicylic Acid test — interface ring ruined!`, 'warn');
+        } else {
+          logEntry(`[Tube #${state.activeTubeIdx + 1}] Shook test tube gently.`, 'action');
+        }
+        evaluateReaction('Shook test tube.');
+      } else if (action === 'warm_hands') {
+        t.heatState = 'warm_hands';
+        logEntry(`[Tube #${state.activeTubeIdx + 1}] Warmed tube between hands (37°C).`, 'action');
+        evaluateReaction('Warmed between hands.');
+      } else if (action === 'water_bath') {
+        t.heatState = 'water_bath';
+        logEntry(`[Tube #${state.activeTubeIdx + 1}] Heated in Boiling Water Bath (100°C).`, 'action');
+        evaluateReaction('Heated in boiling water bath.');
+      } else if (action === 'direct_flame') {
+        t.heatState = 'direct_flame';
+        logEntry(`[Tube #${state.activeTubeIdx + 1}] Boiled directly over Bunsen Flame.`, 'action');
+        evaluateReaction('Boiled on direct flame.');
+      } else if (action === 'cool') {
+        t.heatState = 'room';
+        logEntry(`[Tube #${state.activeTubeIdx + 1}] Cooled tube under tap water (25°C).`, 'action');
+        evaluateReaction('Cooled to room temperature.');
+      }
+      updateStats();
+    }
+
+    // =========================================================================
+    // VOLUME CALCULATION & STRICT CHEMICAL REACTION ENGINE
+    // =========================================================================
+    function getMl(tube, id) {
+      if (!tube.liquids[id]) return 0;
+      return tube.liquids[id].ml + tube.liquids[id].drops * 0.05;
+    }
+
+    function getDrops(tube, id) {
+      if (!tube.liquids[id]) return 0;
+      return tube.liquids[id].drops + tube.liquids[id].ml * 20;
+    }
+
+    function getTotalLiquidMl(tube) {
+      let total = 0;
+      for (const id in tube.liquids) {
+        total += getMl(tube, id);
+      }
+      return total;
+    }
+
+    function formatTubeContents(tube) {
+      const parts = [];
+      for (const id in tube.liquids) {
+        const { ml, drops } = tube.liquids[id];
+        if (ml > 0 && drops > 0) parts.push(`${ml}mL+${drops}d ${REAGENT_NAMES[id]}`);
+        else if (ml > 0) parts.push(`${ml}mL ${REAGENT_NAMES[id]}`);
+        else if (drops > 0) parts.push(`${drops}d ${REAGENT_NAMES[id]}`);
+      }
+      for (const id in tube.solids) {
+        const sp = tube.solids[id];
+        if (sp > 0) parts.push(`${sp} spat ${REAGENT_NAMES[id]}`);
+      }
+      return parts.length ? parts.join(' + ') : 'Empty dry tube';
+    }
+
+    function evaluateReaction(triggerText, isTubeSwitch = false) {
+      const t = getActiveTube();
+      const comp = COMPOUNDS[state.activeCompoundKey];
+
+      const unkMl = getMl(t, 'unknown');
+      const unkDrops = getDrops(t, 'unknown');
+      const waterMl = getMl(t, 'water');
+      const naoh10Ml = getMl(t, 'naoh10');
+      const naoh30Ml = getMl(t, 'naoh30');
+      const iodineDrops = getDrops(t, 'iodine');
+      const npMl = getMl(t, 'nitroprusside');
+      const salSpat = t.solids.salicylic || 0;
+      const h2so4WallDrops = getDrops(t, 'conc_h2so4_wall');
+      const h2so4DirectDrops = getDrops(t, 'conc_h2so4_direct');
+      const boraxSpat = t.solids.borax || 0;
+      const phphDrops = getDrops(t, 'phenolphthalein');
+      const kmno4Ml = getMl(t, 'kmno4');
+      const na2co3Spat = t.solids.na2co3 || 0;
+      const hgcl2Ml = getMl(t, 'hgcl2');
+
+      const totalMl = getTotalLiquidMl(t);
+      let liquidHeight = Math.min(82, totalMl * 11);
+      let liquidColor = 'rgba(226, 232, 240, 0.25)';
+      let upperHeight = 0;
+      let upperColor = 'transparent';
+      let pptHeight = 0;
+      let pptColor = 'transparent';
+      let showBubbles = false;
+      let observation = triggerText;
+
+      // Show undissolved solids if no/little water
+      if (totalMl < 0.5 && (salSpat > 0 || boraxSpat > 0 || na2co3Spat > 0)) {
+        pptHeight = 7;
+        pptColor = '#f8fafc';
+      }
+
+      // -----------------------------------------------------------------------
+      // 1. MISCIBILITY TEST (Unknown + Distilled H2O)
+      // -----------------------------------------------------------------------
+      if (unkMl >= 0.4 && waterMl >= 1.0 && Object.keys(t.liquids).length === 2 && Object.keys(t.solids).length === 0) {
+        state.executedValidTests.add('Miscibility Test (Unknown + Distilled H₂O)');
+        if (!comp.miscible) {
+          liquidHeight = Math.min(75, waterMl * 12);
+          liquidColor = 'rgba(186, 230, 253, 0.32)';
+          upperHeight = Math.min(25, unkMl * 12);
+          upperColor = 'rgba(253, 230, 138, 0.48)';
+          observation = 'Immiscible with H₂O! Two distinct layers formed (oily unknown floats on top, lighter than H₂O) ∴ Ethyl acetate.';
+          if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+        } else {
+          observation = comp.name === 'Glycerol'
+            ? 'Miscible with H₂O (viscous liquid dissolves completely into a single clear layer).'
+            : 'Completely miscible with H₂O (single homogeneous clear layer).';
+          if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 2. Na2CO3 TEST (Unknown + Na2CO3 without KMnO4)
+      // -----------------------------------------------------------------------
+      if (unkMl >= 0.4 && na2co3Spat >= 1 && kmno4Ml === 0) {
+        state.executedValidTests.add('Sodium Carbonate (Na₂CO₃) Effervescence Test');
+        if (comp.na2co3Eff) {
+          showBubbles = true;
+          observation = 'Brisk EFFERVESCENCE of CO₂ gas! Confirms STRONG ACID (Formic acid or Acetic acid).';
+          if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+        } else {
+          pptHeight = 5;
+          pptColor = 'rgba(255, 255, 255, 0.7)';
+          observation = comp.litmus === 'weak_acid'
+            ? 'NO effervescence with Na₂CO₃! (Weak acid trap — treat as NEUTRAL group!).'
+            : 'No effervescence with Na₂CO₃ (Neutral compound).';
+          if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 3. IODOFORM TEST (1 mL unk + 3 mL 10% NaOH + excess I2 + Warm hands)
+      // -----------------------------------------------------------------------
+      if (iodineDrops > 0 || (naoh10Ml > 0 && npMl === 0)) {
+        if (iodineDrops > 0) {
+          // Check wrong alkali (30% NaOH instead of 10% NaOH)
+          if (naoh30Ml > 0 && naoh10Ml === 0) {
+            liquidColor = 'rgba(217, 119, 6, 0.45)';
+            observation = '⚠️ Used 30% NaOH instead of 10% NaOH! Strongly alkaline medium causes side reactions — test inconclusive.';
+            recordProceduralError('Iodoform Test: Used 30% NaOH instead of 10% NaOH.');
+          } else if (naoh10Ml === 0) {
+            liquidColor = 'rgba(146, 64, 14, 0.85)'; // dark brown iodine
+            observation = 'Dark brown I₂ color (missing 10% NaOH!).';
+          } else if (naoh10Ml < 2.5) {
+            liquidColor = 'rgba(253, 224, 71, 0.35)';
+            observation = `Insufficient 10% NaOH (${naoh10Ml.toFixed(1)} mL added; textbook recipe requires 3 mL 10% NaOH).`;
+            recordProceduralError('Iodoform Test: Added less than 3 mL of 10% NaOH.');
+          } else if (iodineDrops < 3) {
+            liquidColor = 'rgba(226, 232, 240, 0.25)';
+            observation = 'Iodine decolorized immediately! Add excess I₂ until a persistent pale yellow color appears.';
+          } else {
+            // Proper excess I2 + 3 mL 10% NaOH!
+            liquidColor = 'rgba(253, 224, 71, 0.38)';
+            if (unkMl < 0.5) {
+              observation = 'Persistent pale yellow alkaline iodine solution (dispense 1 mL unknown first!).';
+            } else if (t.heatState === 'direct_flame') {
+              observation = '⚠️ Overheated on direct flame! Volatile unknown/iodoform decomposed — warm gently between hands instead.';
+              recordProceduralError('Iodoform Test: Boiled on direct flame instead of warming between hands.');
+            } else if (t.heatState === 'warm_hands' || t.heatState === 'water_bath') {
+              state.executedValidTests.add('Iodoform Test (1 mL unk + 3 mL 10% NaOH + excess I₂ + warm)');
+              if (comp.iodoform) {
+                pptHeight = 16;
+                pptColor = '#facc15';
+                observation = '✅ +ve Iodoform Test: Heavy CANARY YELLOW PRECIPITATE (CHI₃) with antiseptic odor! (Ethanol, Acetaldehyde, or Acetone).';
+                if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+              } else {
+                observation = '❌ -ve Iodoform Test: Clear pale yellow solution, NO yellow precipitate (Formalin, Methanol, or Glycerol).';
+                if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+              }
+            } else {
+              observation = 'Persistent pale yellow color achieved. Now warm between hands to complete the Iodoform reaction!';
+            }
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 4. SODIUM NITROPRUSSIDE TEST (1 mL unk + 3 mL 30% NaOH + 2 mL NP)
+      // -----------------------------------------------------------------------
+      if (npMl > 0) {
+        if (naoh10Ml > 0 && naoh30Ml === 0) {
+          liquidColor = 'rgba(251, 191, 36, 0.35)';
+          observation = '⚠️ Used 10% NaOH instead of 30% NaOH! Weak alkalinity prevents proper enolate/nitroprusside color.';
+          recordProceduralError('Sodium Nitroprusside Test: Used 10% NaOH instead of 30% NaOH.');
+        } else if (naoh30Ml < 2.5 || npMl < 1.5 || unkMl < 0.5) {
+          liquidColor = 'rgba(251, 191, 36, 0.35)';
+          observation = `Incomplete recipe: Requires 1 mL unknown + 3 mL 30% NaOH + 2 mL Sodium Nitroprusside (Current: ${unkMl}mL unk, ${naoh30Ml}mL 30% NaOH, ${npMl}mL NP).`;
+        } else {
+          state.executedValidTests.add('Sodium Nitroprusside Test (1 mL unk + 3 mL 30% NaOH + 2 mL NP)');
+          if (comp.nitroprusside) {
+            liquidColor = 'rgba(225, 29, 72, 0.82)';
+            observation = '✅ +ve Sodium Nitroprusside Test: Deep WINE-RED COLOR formed! (Acetaldehyde or Acetone).';
+            if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+          } else {
+            liquidColor = 'rgba(253, 224, 71, 0.35)';
+            observation = '❌ -ve Sodium Nitroprusside Test: NO red color (stays pale yellow-amber) ∴ Ethanol!';
+            if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 5. ACTION OF 30% NaOH BOILING (1 mL unk + 2 mL 30% NaOH + Boiling Water Bath)
+      // -----------------------------------------------------------------------
+      if (naoh30Ml >= 1.5 && npMl === 0 && iodineDrops === 0) {
+        if (t.heatState === 'water_bath' || t.heatState === 'direct_flame') {
+          showBubbles = true;
+          if (unkMl >= 0.5) {
+            state.executedValidTests.add('Action of 30% NaOH on Boiling Water Bath');
+            if (comp.naohBoilResin) {
+              liquidColor = 'rgba(217, 119, 6, 0.78)';
+              upperHeight = 14;
+              upperColor = 'rgba(245, 158, 11, 0.94)';
+              observation = '✅ +ve Action of 30% NaOH (Boil): YELLOW RESIN formed with pungent odor ∴ Acetaldehyde!';
+              if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+            } else {
+              liquidColor = 'rgba(226, 232, 240, 0.25)';
+              observation = '❌ -ve Action of 30% NaOH (Boil): Clear solution, NO yellow resin ∴ Acetone!';
+              if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+            }
+          }
+        } else if (unkMl >= 0.5) {
+          observation = 'Cold mixture remains clear; aldol resinification requires heating in Boiling Water Bath.';
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 6. SALICYLIC ACID TEST (Dry T.T. + 1 spat Salicylic + 3-4 drops unk + 5 drops Conc. H2SO4 on wall, NO SHAKING)
+      // -----------------------------------------------------------------------
+      if (salSpat > 0 || h2so4WallDrops > 0 || h2so4DirectDrops > 0) {
+        if (waterMl > 0) {
+          t.salicylicRuined = true;
+          liquidColor = 'rgba(120, 53, 15, 0.55)';
+          observation = '❌ Tube was wet (contains H₂O)! Conc. H₂SO₄ diluted and heated unevenly — interface ring ruined.';
+          recordProceduralError('Salicylic Acid Test: Tube contained water (must be dry).');
+        } else if (t.salicylicRuined) {
+          liquidColor = 'rgba(120, 53, 15, 0.55)';
+          observation = '❌ TRAP TRIGGERED! You shook the tube and destroyed the crimson interface ring!';
+        } else if (unkMl >= 0.8) {
+          liquidColor = 'rgba(248, 250, 252, 0.35)';
+          observation = '⚠️ Too much unknown added (used ~1 mL instead of 3–4 drops); diluted the acid interface.';
+          recordProceduralError('Salicylic Acid Test: Added ~1 mL unknown instead of 3–4 drops.');
+        } else if (h2so4DirectDrops > 0 && h2so4WallDrops === 0) {
+          liquidColor = 'rgba(120, 53, 15, 0.45)';
+          observation = '⚠️ Added Conc. H₂SO₄ directly instead of carefully along the wall of the test tube!';
+          recordProceduralError('Salicylic Acid Test: Added Conc. H₂SO₄ directly instead of along the tube wall.');
+        } else if (salSpat >= 1 && unkDrops >= 2 && h2so4WallDrops >= 3) {
+          state.executedValidTests.add('Salicylic Acid Test (Dry T.T., no shaking)');
+          liquidColor = 'rgba(248, 250, 252, 0.35)';
+          if (comp.salicylic) {
+            upperHeight = 16;
+            upperColor = 'rgba(190, 18, 60, 0.94)';
+            observation = '✅ +ve Salicylic Acid Test: Intense CRIMSON RED ring at the interface ∴ Formalin!';
+            if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+          } else {
+            pptHeight = 6;
+            pptColor = '#f8fafc';
+            observation = '❌ -ve Salicylic Acid Test: No crimson red color (Methanol or Glycerol).';
+            if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+          }
+        } else {
+          pptHeight = 7;
+          pptColor = '#f8fafc';
+          observation = 'Salicylic acid in dry tube. Requires 3–4 drops unknown + 5 drops Conc. H₂SO₄ along the wall (DO NOT SHAKE).';
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 7. BORAX TEST (1 spat Borax + 3 mL H2O + 2 drops Ph.Ph + 2 drops unk + Shake + Heat)
+      // -----------------------------------------------------------------------
+      if (boraxSpat > 0 || phphDrops > 0) {
+        if (boraxSpat >= 1 && waterMl >= 2.5 && phphDrops >= 1) {
+          if (unkDrops === 0) {
+            liquidColor = 'rgba(236, 72, 153, 0.74)';
+            observation = 'Pink alkaline Borax-Phenolphthalein solution formed. Add 2 drops unknown and shake.';
+          } else if (unkMl >= 0.8) {
+            liquidColor = 'rgba(236, 72, 153, 0.35)';
+            observation = '⚠️ Excess unknown added (~1 mL); diluted the indicator. Use only 2 drops unknown!';
+            recordProceduralError('Borax Test: Added excess unknown (~1 mL) instead of 2 drops.');
+          } else if (!t.shaken) {
+            liquidColor = 'rgba(236, 72, 153, 0.65)';
+            observation = '2 drops unknown added — now shake the test tube to mix!';
+          } else {
+            state.executedValidTests.add('Borax Test (Borax + 3 mL H₂O + Ph.Ph + 2 drops unk + shake/heat)');
+            if (comp.borax) {
+              if (t.heatState === 'water_bath' || t.heatState === 'direct_flame') {
+                liquidColor = 'rgba(236, 72, 153, 0.76)';
+                showBubbles = true;
+                observation = '✅ +ve Borax Test (Heated): PINK COLOR REAPPEARS on heating! (Cool to see it disappear again) ∴ Glycerol!';
+                if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+              } else {
+                liquidColor = 'rgba(226, 232, 240, 0.25)';
+                observation = '✅ +ve Borax Test (Cold): PINK COLOR DISAPPEARED on shaking! Heat tube to confirm pink reappears ∴ Glycerol!';
+                if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+              }
+            } else {
+              liquidColor = 'rgba(236, 72, 153, 0.74)';
+              observation = '❌ -ve Borax Test: Pink color persists (does NOT disappear) ∴ Methanol!';
+              if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+            }
+          }
+        } else {
+          observation = 'Borax test requires 1 spatula Borax + 3 mL Distilled H₂O + 2 drops Phenolphthalein.';
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 8. ALKALINE KMnO4 TEST (3 mL KMnO4 + 2 spatulas Na2CO3 + 1-2 drops unknown)
+      // -----------------------------------------------------------------------
+      if (kmno4Ml > 0) {
+        if (na2co3Spat < 2) {
+          liquidColor = 'rgba(126, 34, 206, 0.88)';
+          observation = unkDrops > 0
+            ? '⚠️ Unbuffered/neutral KMnO₄ reacts sluggishly! Add 2 spatulas Na₂CO₃ first.'
+            : 'Deep purple KMnO₄. Add 2 spatulas Na₂CO₃ + 1–2 drops unknown.';
+          if (unkDrops > 0) recordProceduralError('Alkaline KMnO₄ Test: Forgot 2 spatulas of Na₂CO₃.');
+        } else if (kmno4Ml < 2.5) {
+          liquidColor = 'rgba(126, 34, 206, 0.88)';
+          observation = `Added ${kmno4Ml.toFixed(1)} mL KMnO₄ (textbook recipe requires 3 mL KMnO₄ + 2 spatulas Na₂CO₃ + 1–2 drops unknown).`;
+        } else if (unkDrops === 0) {
+          liquidColor = 'rgba(126, 34, 206, 0.88)';
+          observation = 'Alkaline KMnO₄ ready (3 mL KMnO₄ + 2 spatulas Na₂CO₃). Add 1–2 drops unknown.';
+        } else {
+          state.executedValidTests.add('Alkaline KMnO₄ Test (3 mL KMnO₄ + 2 spatulas Na₂CO₃ + 1–2 drops unk)');
+          if (comp.kmno4Decolor) {
+            liquidColor = 'rgba(217, 119, 6, 0.35)';
+            pptHeight = 15;
+            pptColor = '#78350f';
+            observation = '✅ +ve Alkaline KMnO₄ Test: Purple color DECOLORIZES with BROWN MnO₂ PRECIPITATE ∴ Formic acid!';
+            if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+          } else {
+            liquidColor = 'rgba(126, 34, 206, 0.88)';
+            observation = '❌ -ve Alkaline KMnO₄ Test: Purple color persists (NO decolorization & NO brown ppt.) ∴ Acetic acid!';
+            if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 9. HgCl2 CONFIRMATORY TEST (1 mL acid + 1 mL HgCl2 + Boil on direct flame)
+      // -----------------------------------------------------------------------
+      if (hgcl2Ml > 0) {
+        if (unkMl < 0.5) {
+          observation = 'HgCl₂ solution in tube. Dispense 1 mL unknown acid and boil on direct flame.';
+        } else if (t.heatState === 'direct_flame' || t.heatState === 'water_bath') {
+          showBubbles = true;
+          state.executedValidTests.add('HgCl₂ Confirmatory Test (1 mL acid + 1 mL HgCl₂ + boil on direct flame)');
+          if (comp.hgcl2) {
+            pptHeight = 14;
+            pptColor = '#94a3b8';
+            observation = '✅ +ve HgCl₂ Test (Boiled): WHITE SILKY PRECIPITATE (Hg₂Cl₂) turning GREY ∴ Formic acid confirmed!';
+            if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+          } else {
+            observation = '❌ -ve HgCl₂ Test (Boiled): Clear solution, NO precipitate ∴ Acetic acid confirmed!';
+            if (!isTubeSwitch) logEntry(`Observation: ${observation}`, 'result');
+          }
+        } else {
+          observation = 'No reaction in cold; requires boiling on Direct Flame.';
+        }
+      }
+
+      renderTubeVisuals(observation, {
+        liquidHeight,
+        liquidColor,
+        upperHeight,
+        upperColor,
+        pptHeight,
+        pptColor,
+        showBubbles
+      });
+    }
+
+    function renderTubeVisuals(observationText, visuals = null) {
+      const t = getActiveTube();
+      const idx = state.activeTubeIdx + 1;
+      const totalMl = getTotalLiquidMl(t);
+
+      document.getElementById('tubeTitle').innerHTML = `Tube #${idx} ` +
+        (t.isDry
+          ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Clean & Dry</span>`
+          : `<span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">In Use</span>`);
+
+      document.getElementById('tubeVolumeBadge').textContent = `Vol: ${totalMl.toFixed(2)} mL`;
+      document.getElementById('tubeContentsBar').textContent = `Contents: ${formatTubeContents(t)}`;
+      document.getElementById('visualObservation').textContent = observationText;
+
+      // Update Heat Badges & Flames
+      const tempText = document.getElementById('tempText');
+      const tempDot = document.getElementById('tempDot');
+      const flame = document.getElementById('bunsenFlame');
+      const bath = document.getElementById('waterBathVisual');
+      const hand = document.getElementById('handWarmVisual');
+      const steam = document.getElementById('steamContainer');
+
+      flame.classList.add('hidden');
+      bath.classList.add('hidden');
+      hand.classList.add('hidden');
+      steam.classList.add('hidden');
+
+      if (t.heatState === 'direct_flame') {
+        tempText.textContent = 'Direct Flame';
+        tempDot.className = 'w-2 h-2 rounded-full bg-orange-500 animate-ping';
+        flame.classList.remove('hidden');
+        steam.classList.remove('hidden');
+      } else if (t.heatState === 'water_bath') {
+        tempText.textContent = 'Water Bath (100°C)';
+        tempDot.className = 'w-2 h-2 rounded-full bg-sky-400 animate-pulse';
+        bath.classList.remove('hidden');
+        steam.classList.remove('hidden');
+      } else if (t.heatState === 'warm_hands') {
+        tempText.textContent = 'Warm Hands (37°C)';
+        tempDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        hand.classList.remove('hidden');
+      } else {
+        tempText.textContent = 'Room Temp';
+        tempDot.className = 'w-2 h-2 rounded-full bg-sky-400';
+      }
+
+      // Litmus Strip Visual
+      const litmusStrip = document.getElementById('litmusStrip');
+      const litmusBase = document.getElementById('litmusBase');
+      const litmusTip = document.getElementById('litmusTip');
+      const litmusTypeLabel = document.getElementById('litmusTypeLabel');
+      const litmusLabel = document.getElementById('litmusLabel');
+
+      if (t.litmusType) {
+        const comp = COMPOUNDS[state.activeCompoundKey];
+        const hasAlkali = getMl(t, 'naoh10') > 0 || getMl(t, 'naoh30') > 0 || (t.solids.na2co3 || 0) > 0;
+        litmusStrip.classList.remove('hidden');
+        litmusTypeLabel.textContent = t.litmusType === 'blue' ? 'Blue L.P.' : 'Red L.P.';
+        litmusBase.className = t.litmusType === 'blue' ? 'h-1/2 bg-blue-500' : 'h-1/2 bg-red-500';
+
+        if (hasAlkali) {
+          litmusTip.className = 'h-1/2 bg-blue-500 transition-colors duration-500';
+          litmusLabel.textContent = 'Alkaline';
+          litmusLabel.className = 'text-[10px] font-semibold mt-1 text-blue-300';
+        } else if (t.litmusType === 'blue' && getMl(t, 'unknown') > 0) {
+          if (comp.litmus === 'strong_acid') {
+            litmusTip.className = 'h-1/2 bg-red-500 transition-colors duration-500';
+            litmusLabel.textContent = 'Red (Acid)';
+            litmusLabel.className = 'text-[10px] font-semibold mt-1 text-red-400';
+          } else if (comp.litmus === 'weak_acid') {
+            litmusTip.className = 'h-1/2 bg-rose-400 transition-colors duration-500';
+            litmusLabel.textContent = 'Faint Red!';
+            litmusLabel.className = 'text-[10px] font-semibold mt-1 text-amber-400';
+          } else {
+            litmusTip.className = 'h-1/2 bg-blue-500 transition-colors duration-500';
+            litmusLabel.textContent = 'Neutral';
+            litmusLabel.className = 'text-[10px] font-semibold mt-1 text-blue-300';
+          }
+        } else {
+          litmusTip.className = t.litmusType === 'blue' ? 'h-1/2 bg-blue-500' : 'h-1/2 bg-red-500';
+          litmusLabel.textContent = 'No Change';
+          litmusLabel.className = 'text-[10px] font-semibold mt-1 text-slate-300';
+        }
+      } else {
+        litmusStrip.classList.add('hidden');
+      }
+
+      // Liquid & Precipitate Visuals
+      const mainLiquid = document.getElementById('mainLiquid');
+      const upperLayer = document.getElementById('upperLayer');
+      const pptLayer = document.getElementById('precipitateLayer');
+      const bubblesContainer = document.getElementById('bubblesContainer');
+
+      if (!visuals) {
+        mainLiquid.style.height = '0%';
+        upperLayer.style.height = '0%';
+        pptLayer.style.height = '0px';
+        bubblesContainer.classList.add('hidden');
+        return;
+      }
+
+      mainLiquid.style.height = visuals.liquidHeight + '%';
+      mainLiquid.style.backgroundColor = visuals.liquidColor;
+      upperLayer.style.height = visuals.upperHeight + '%';
+      upperLayer.style.backgroundColor = visuals.upperColor;
+      pptLayer.style.height = visuals.pptHeight + 'px';
+      pptLayer.style.backgroundColor = visuals.pptColor;
+
+      if (visuals.showBubbles) {
+        bubblesContainer.classList.remove('hidden');
+        if (bubblesContainer.children.length === 0) {
+          for (let i = 0; i < 12; i++) {
+            const b = document.createElement('div');
+            b.className = 'bubble';
+            const size = 4 + Math.random() * 5;
+            b.style.width = size + 'px';
+            b.style.height = size + 'px';
+            b.style.left = (10 + Math.random() * 80) + '%';
+            b.style.animationDelay = (Math.random() * 1.2) + 's';
+            bubblesContainer.appendChild(b);
+          }
+        }
+      } else {
+        bubblesContainer.classList.add('hidden');
+      }
+    }
+
+    // =========================================================================
+    // PRACTICAL EXAM SCORECARD & GRADING
+    // =========================================================================
+    function submitDeduction() {
+      const guess = document.getElementById('guessSelect').value;
+      if (!guess) {
+        showToast('Please select a compound from the dropdown first!');
+        return;
+      }
+
+      const actualKey = state.activeCompoundKey;
+      const actualComp = COMPOUNDS[actualKey];
+      const guessedComp = COMPOUNDS[guess];
+      const isCorrect = guess === actualKey;
+
+      let score = isCorrect ? 100 : 0;
+      if (isCorrect) {
+        if (state.executedValidTests.size === 0) score -= 45; // Blind guess without valid textbook tests
+        score -= state.proceduralErrors.length * 10;
+        score = Math.max(40, score);
+      }
+
+      const badge = document.getElementById('resultBadge');
+      const title = document.getElementById('resultTitle');
+      const body = document.getElementById('resultBody');
+
+      if (isCorrect) {
+        badge.className = 'inline-block px-2.5 py-0.5 rounded-full text-xs font-bold uppercase mb-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+        badge.textContent = `Correct Deduction • Exam Score: ${score}/100`;
+        title.textContent = `Unknown Identified: ${actualComp.name}`;
+      } else {
+        badge.className = 'inline-block px-2.5 py-0.5 rounded-full text-xs font-bold uppercase mb-1 bg-rose-500/20 text-rose-300 border border-rose-500/40';
+        badge.textContent = 'Incorrect Deduction • Exam Score: 0/100';
+        title.textContent = `You answered ${guessedComp.name}, but the unknown was ${actualComp.name}`;
+      }
+
+      const validTestsList = Array.from(state.executedValidTests);
+      const validTestsHTML = validTestsList.length > 0
+        ? `<ul class="list-disc pl-4 space-y-1 text-xs text-emerald-200">${validTestsList.map(t => `<li>${t}</li>`).join('')}</ul>`
+        : `<p class="text-xs text-slate-400 italic">No complete textbook test recipes were executed before submitting.</p>`;
+
+      const errorsHTML = state.proceduralErrors.length > 0
+        ? `<div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200">
+            <strong class="block mb-1 text-xs">⚠️ Recipe / Procedural Errors (-10 pts each):</strong>
+            <ul class="list-disc pl-4 space-y-1 text-xs">
+              ${state.proceduralErrors.map(e => `<li>${e}</li>`).join('')}
+            </ul>
+          </div>`
+        : `<div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+            ✓ Zero procedural or volume errors recorded on the bench!
+          </div>`;
+
+      let weakAcidNote = '';
+      if (!isCorrect && actualComp.litmus === 'weak_acid' && (guess === 'formic_acid' || guess === 'acetic_acid')) {
+        weakAcidNote = `
+          <div class="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs">
+            <strong>💡 Classic Exam Trap!</strong> ${actualComp.name} turns Blue Litmus Paper slightly red because it is a weak acid, <strong>but gives NO effervescence with Na₂CO₃</strong>. Per the scheme's N.B. rule, treat it as part of the <strong>Neutral Group</strong>!
+          </div>`;
+      }
+
+      body.innerHTML = `
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="text-[11px] text-slate-400">Valid Tests</div>
+            <div class="text-base font-bold font-mono text-emerald-400">${validTestsList.length}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="text-[11px] text-slate-400">Recipe Errors</div>
+            <div class="text-base font-bold font-mono ${state.proceduralErrors.length ? 'text-amber-400' : 'text-white'}">${state.proceduralErrors.length}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="text-[11px] text-slate-400">Final Grade</div>
+            <div class="text-base font-bold font-mono ${isCorrect ? 'text-emerald-400' : 'text-rose-400'}">${score}%</div>
+          </div>
+        </div>
+        ${weakAcidNote}
+        ${errorsHTML}
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+          <strong class="text-emerald-400 block mb-1 text-xs">Tests Executed with Exact Textbook Volumes:</strong>
+          ${validTestsHTML}
+        </div>
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+          <strong class="text-teal-300 block mb-1.5 text-xs">Official Deduction Path for ${actualComp.name}:</strong>
+          <ul class="space-y-1 text-xs text-slate-300">
+            ${actualComp.expectedPath.map(step => `<li>${step}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+
+      document.getElementById('resultModal').classList.remove('hidden');
+    }
+
+    function closeResultModal() {
+      document.getElementById('resultModal').classList.add('hidden');
+    }
+
+    function toggleSchemeModal() {
+      if (state.mode === 'hard') {
+        showToast('Scheme Chart is locked in Hard Exam Mode!');
+        return;
+      }
+      document.getElementById('schemeModal').classList.toggle('hidden');
+    }
+
+    // =========================================================================
+    // NOTEBOOK LOGGING & UI HELPERS
+    // =========================================================================
+    function logEntry(text, type = 'neutral') {
+      const log = document.getElementById('labLog');
+      const item = document.createElement('div');
+      const colors = {
+        info: 'bg-teal-950/50 border-teal-800/60 text-teal-200',
+        action: 'bg-slate-950/90 border-slate-800 text-slate-200',
+        result: 'bg-indigo-950/50 border-indigo-800/60 text-indigo-200 font-semibold',
+        warn: 'bg-amber-950/50 border-amber-700/60 text-amber-200',
+        neutral: 'bg-slate-950/70 border-slate-800/70 text-slate-400'
+      };
+      item.className = `p-2 rounded-lg border text-[11px] leading-relaxed ${colors[type] || colors.neutral}`;
+      item.textContent = text;
+      log.appendChild(item);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearLog(silent = false) {
+      const log = document.getElementById('labLog');
+      log.innerHTML = '';
+      if (!silent) logEntry('Bench log cleared.', 'neutral');
+    }
+
+    function updateStats() {
+      document.getElementById('statActiveTube').textContent = `#${state.activeTubeIdx + 1}`;
+      document.getElementById('statSteps').textContent = state.stepsCount;
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.add('hidden'), 2600);
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
